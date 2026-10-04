@@ -1,165 +1,244 @@
-# AI Agent — Data Analytics Copilot
+# Analyst Agent
 
-A portfolio-ready Python application for practical analytics workflows:
+> A reviewable AI data-quality and analytics workspace for raw files, public APIs, and PostgreSQL.
 
-- **API extraction:** download a JSON API response into CSV, JSON, or Parquet.
-- **Database analysis:** run guarded, read-only PostgreSQL queries or ask a natural-language question that Gemini translates into schema-grounded SQL.
-- **Dataset workbench:** upload a raw CSV, JSON, or Parquet dataset (or import a public JSON API), profile every row, review Gemini cleanup suggestions, approve deterministic changes, validate results, and run safe local SQL analysis.
-- **Dataset orientation:** ask the agent to describe the likely purpose and row-level meaning of an unfamiliar dataset, explain its fields, flag caveats, and provide clickable starter questions grounded in the profile.
+**Analyst Agent** transforms the original SQL Analyst and ETL Analyst prototype into a browser-based portfolio application. Users can upload a CSV, JSON, or Parquet file (up to 200 MB), inspect a full-dataset quality profile, review cleaning suggestions, stage an unchanged raw copy in PostgreSQL, and answer questions through guarded local SQL.
 
-The included ride-sharing dataset models users, vehicles, rides, payments, and ratings. The project demonstrates agent-assisted analytics with explicit security boundaries rather than an unrestricted autonomous agent.
+The design is deliberately conservative: AI helps explain and propose; deterministic services validate and execute locally; users approve changes.
+
+## The analyst workflow
+
+1. **Ingest** a file or public JSON API response.
+2. **Profile** every row locally for nulls, duplicates, type issues, zeros, distinct values, and potential PII.
+3. **Understand** an unfamiliar dataset with a profile-grounded orientation and starter questions.
+4. **Review** conservative cleanup recommendations before changing anything.
+5. **Validate** before/after quality results and download the current dataset.
+6. **Analyze** with natural-language or explicit, read-only SQL.
+7. **Map and reconcile** source files against a PostgreSQL target table around an approved ETL load.
+
+## Product walkthrough
+
+### Import a raw file or public API
+
+The workspace accepts CSV, JSON, and Parquet files. It can also import a public JSON endpoint with response-size limits and private-network blocking.
+
+![Import a raw dataset or public API](docs/screenshots/01-import.png)
+
+### Profile the complete dataset
+
+After import, Analyst Agent profiles the active dataset locally: row count, column count, duplicate rows, types, missing values, zero values, distinct values, and potential PII-sensitive columns. These checks occur before cleanup is proposed.
+
+![Dataset quality profile and analyst workspace](docs/screenshots/02-profile-and-analysis.png)
+
+### Review decisions instead of opaque automation
+
+The app presents cleanup as a review plan. The user chooses suggestion IDs to approve; it applies only deterministic changes and returns a validation report. Ambiguous business decisions, including whether a market or financial value should be imputed, remain human decisions.
+
+### Ask questions safely with local SQL
+
+A user can ask a natural-language question or write their own query. Gemini receives the schema and profile—not raw browser-uploaded records. The resulting SQL runs locally against an in-memory DuckDB table called `dataset`; only validated `SELECT` and `WITH` statements run.
+
+![Validated local SQL output](docs/screenshots/03-sql-result.png)
+
+## Core capabilities
+
+| Area | What it does |
+| --- | --- |
+| Dataset ingestion | Reads CSV, JSON, and Parquet files up to 200 MB; imports bounded public JSON APIs. |
+| Data profiling | Measures full-dataset nulls, duplicates, zeros, distinct counts, types, and potential PII. |
+| Dataset orientation | Produces an AI-assisted description, likely row grain, field guide, caveats, and starter questions. |
+| Reviewable cleanup | Suggests conservative actions; users explicitly approve individual actions before deterministic transformations run. |
+| Missing-value safety | Detects missingness without inventing financial or market values such as bid, ask, and prior-close prices. |
+| SQL analysis | Generates schema-grounded SQL from a question or accepts user SQL; runs it locally after read-only validation. |
+| PostgreSQL exploration | Supports schema inspection, explicit read-only queries, and natural-language queries against PostgreSQL. |
+| ETL readiness | Maps source fields to a target table and identifies unmapped fields / missing required target fields. |
+| ETL reconciliation | Compares source and target row counts after a separately approved load. |
+| Raw-data staging | On explicit request, stores unchanged source rows in generic PostgreSQL JSONB staging tables. |
 
 ## Architecture
 
 ```text
-Browser application
- └─ FastAPI delivery layer ──> original ApplicationDataAgent
-     ├─ ETL analyst ──> profile / understand / cleanup plan / approved cleanup
-     └─ SQL analyst ──> Gemini DuckDB SQL (or explicit SQL) ──> validator ──> in-memory analysis
+                         ┌─────────────────────────────┐
+                         │        Analyst Desk UI       │
+                         │     FastAPI + HTML/CSS/JS    │
+                         └──────────────┬──────────────┘
+                                        │
+                 ┌──────────────────────┴──────────────────────┐
+                 │       Original ApplicationDataAgent facade    │
+                 └──────────────┬────────────────┬──────────────┘
+                                │                │
+                  ┌─────────────▼──────┐  ┌──────▼─────────────┐
+                  │ Dataset ETL Agent  │  │ Local SQL Agent    │
+                  │ profile / plan /   │  │ question → SQL /   │
+                  │ approve / validate │  │ validated execution│
+                  └─────────────┬──────┘  └──────┬─────────────┘
+                                │                │
+                   ┌────────────▼───────┐  ┌─────▼─────────────┐
+                   │ pandas + local disk│  │ DuckDB (local)    │
+                   └────────────────────┘  └───────────────────┘
 
-CLI
- ├─ extract ──> requests ──> pandas ──> local dataset
- ├─ query   ──> deterministic read-only SQL validator ──> PostgreSQL
- └─ ask     ──> Gemini + live schema context ──> validator ──> PostgreSQL
+            Optional PostgreSQL: read-only exploration, mapping,
+               reconciliation, and explicit generic raw staging
 ```
 
-Every database session is opened in PostgreSQL read-only mode. The application also rejects multiple statements and database-changing/admin keywords before execution. Use a PostgreSQL role with `SELECT` permissions only for defence in depth.
+### Prototype continuity
 
-## Run the full application
+This is not a replacement for the original project. The delivery layer calls the existing `ApplicationDataAgent` facade in `agents/aiagent.py`, which routes work to the existing ETL and SQL agents. Model selection continues to use `utils/llm_pick.py`:
 
-Requires Python 3.12+. Gemini is optional until you ask for AI cleanup suggestions or ask a natural-language analysis question.
+- **Low / Medium** — Gemini Flash Lite for routine profile-based suggestions and SQL tasks.
+- **High** — Gemini Flash for more demanding reasoning.
 
-```bash
+Set `LLM_THINKING_LEVEL` to `low`, `medium`, or `high`; the example configuration uses `medium`.
+
+## Technology
+
+- Python 3.12+, FastAPI, Uvicorn
+- Pandas for ingestion, profiling, and deterministic cleanup
+- DuckDB for isolated local dataset analysis
+- PostgreSQL + psycopg2 for guarded database workflows
+- Gemini via Google GenAI for optional profile-grounded language tasks
+- LangGraph / LangChain components from the original prototype
+- Pytest, Ruff, Docker, and Docker Compose
+
+## Quick start
+
+### Configure
+
+```powershell
 uv sync --group dev
-copy .env.example .env
-# Add GEMINI_API_KEY to .env for AI suggestions and natural-language questions.
-# Choose LLM_THINKING_LEVEL=low, medium, or high (medium is the default).
+Copy-Item .env.example .env
+```
+
+Set `GEMINI_API_KEY` in `.env` to enable AI suggestions, dataset orientation, and natural-language SQL. Profiling and direct local SQL are still useful without an API key.
+
+### Run
+
+```powershell
 uv run uvicorn ai_agent.api:app --reload
 ```
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The browser interface supports complete dataset profiling, reviewable cleanup, validation, download, generated SQL analysis, and explicit local SQL against a table named `dataset`.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
-After profiling an unfamiliar dataset, select **Understand this dataset**. Gemini receives the profile rather than raw records and returns a clearly qualified orientation brief, field guide, caveats, and suggested questions. You can select a suggested question to place it directly into the analysis box.
+### Test the workflow
 
-To run the same app in a container:
+Upload a file from `data/test-data/`. `messy_retail_orders.csv` intentionally contains duplicates, inconsistent text, missing values, zeros, and negative values to exercise the review workflow.
 
-```bash
-docker compose up --build
-```
+## PostgreSQL ETL workflow
 
-## Command-line quick start
+The repository includes a local ride-sharing schema for demonstrations. Configure the database values, then load the seed data once:
 
-Requires Python 3.12+ and PostgreSQL.
-
-```bash
-uv sync --group dev
-copy .env.example .env
-# Set the values in .env; do not commit it.
+```powershell
 uv run python feed_db.py
 uv run ai-agent schema
 ```
 
-To intentionally replace existing loaded records, prefix the loader command with
-`RESET_DATA=true`. It will otherwise preserve existing rows.
+The loader preserves existing records unless `RESET_DATA=true` is set.
 
-Load a public JSON API:
+### Map a source to a target
 
-```bash
-uv run ai-agent extract https://pokeapi.co/api/v2/pokemon --output-dir data/extract --format csv
-```
+Before an approved load, compare CSV/JSON/Parquet source fields with an existing target table:
 
-Run explicit SQL:
-
-```bash
-uv run ai-agent query "SELECT DISTINCT payment_method FROM public.payments ORDER BY payment_method"
-```
-
-Ask a natural-language question (requires `GEMINI_API_KEY`):
-
-```bash
-uv run ai-agent ask "Which five drivers completed the most rides?"
-```
-
-Profile a raw dataset before making changes:
-
-```bash
-uv run ai-agent profile data/users.csv
-```
-
-Apply only explicit, deterministic cleanup actions and receive a before/after
-quality report. Ambiguous rules—such as what a missing discount means—remain a
-human approval decision:
-
-```bash
-uv run ai-agent clean data/users.csv data/cleaned/users.csv --remove-duplicates --trim-text
-```
-
-Generate Gemini-powered suggestions without sending raw rows to the model. The
-result is an approval-ready JSON plan based on full-dataset profile statistics:
-
-```bash
-uv run ai-agent suggest-cleanup data/users.csv data/plans/users-cleanup.json
-```
-
-Review the plan, then apply only the suggestion IDs you approve. Every run
-returns a before/after validation report:
-
-```bash
-uv run ai-agent apply-plan data/users.csv data/plans/users-cleanup.json data/cleaned/users.csv --approve remove-duplicates --approve trim-text
-```
-
-## Local PostgreSQL ETL workflow
-
-The original ETL agent now supports a non-destructive first step before any
-database load. It compares source columns with an existing PostgreSQL target
-table and reports exact mappings, unmapped source fields, and required target
-fields that need a human decision:
-
-```bash
+```powershell
 uv run ai-agent map data/rides.csv public.rides
 ```
 
-After a separately approved load, reconcile the source and target row counts:
+The output reports exact source-to-target matches, unmapped source fields, and required target fields that need a human decision.
 
-```bash
+### Reconcile after a load
+
+After a separately approved ETL load, compare source and target row counts:
+
+```powershell
 uv run ai-agent reconcile data/rides.csv public.rides
 ```
 
-These commands use the existing `DB_*` settings and the read-only PostgreSQL
-layer. They do not insert, update, or delete database records.
+`map` and `reconcile` are non-destructive. They use the original ETL agent facade and never insert, update, or delete business-table records.
 
-To retain an unchanged copy of any uploaded dataset in the generic PostgreSQL
-staging area, configure a separate writer role using `DB_WRITE_*` values. The
-browser then exposes **Stage raw data in PostgreSQL**. This creates the fixed
-`etl_staging.datasets` and `etl_staging.dataset_rows` tables as needed and
-stores heterogeneous source rows as JSONB; it never forces raw data into the
-portfolio's `users`, `rides`, or `payments` tables.
+### Stage raw data explicitly
 
-## Project layout
+**Stage raw data in PostgreSQL** is intentionally separate from loading a business table. Configure a writer role with `DB_WRITE_*` values, then stage an unchanged raw copy to:
 
-```text
-agents/                # original LangGraph prototype, extended with the production agent layer
-models/schema.py        # shared agent state and structured output contracts
-utils/                  # shared LLM selector and operational tools
-src/ai_agent/           # FastAPI delivery layer, CLI, and deterministic safety services
-data/                  # portfolio ride-sharing source data
-feed_db.py             # local PostgreSQL schema/data bootstrap
-tests/                 # focused regression tests
+- `etl_staging.datasets` — source metadata and schema context
+- `etl_staging.dataset_rows` — heterogeneous source rows stored as JSONB
+
+This preserves an audit/reprocessing copy without forcing arbitrary source columns into `public.rides`, `public.payments`, or another modeled table.
+
+## Configuration
+
+Copy `.env.example` to `.env`. Never commit the real file.
+
+| Variable | Purpose |
+| --- | --- |
+| `GEMINI_API_KEY` | Enables Gemini-powered profile interpretation and generated SQL. |
+| `LLM_THINKING_LEVEL` | `low`, `medium` (default), or `high`; uses `utils/llm_pick.py`. |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Read-only PostgreSQL connection for exploration, mapping, and reconciliation. |
+| `DB_WRITE_*` | Separate writer credentials for explicitly requested generic raw staging. |
+| `MAX_UPLOAD_MB` | Upload ceiling; default `200`. |
+| `MAX_API_RESPONSE_MB` | Public API response ceiling; default `25`. |
+| `DATA_RETENTION_HOURS` | Local upload retention; default `24`. |
+| `RATE_LIMIT_PER_MINUTE` | Per-client API request limit; default `30`. |
+| `APP_API_KEY` | Optional API protection for non-public deployment. |
+
+## CLI examples
+
+```powershell
+# Extract a public JSON API response.
+uv run ai-agent extract https://pokeapi.co/api/v2/pokemon --output-dir data/extract --format csv
+
+# Profile and clean a local file.
+uv run ai-agent profile data/users.csv
+uv run ai-agent clean data/users.csv data/cleaned/users.csv --remove-duplicates --trim-text
+
+# Create a reviewable plan; apply only explicit approval IDs.
+uv run ai-agent suggest-cleanup data/users.csv data/plans/users-cleanup.json
+uv run ai-agent apply-plan data/users.csv data/plans/users-cleanup.json data/cleaned/users.csv --approve remove-duplicates --approve trim-text
+
+# Query PostgreSQL through guarded routes.
+uv run ai-agent query "SELECT DISTINCT payment_method FROM public.payments ORDER BY payment_method"
+uv run ai-agent ask "Which five drivers completed the most rides?"
 ```
 
-## Security notes
+## Security and data handling
 
-- Keep secrets exclusively in `.env` or a secret manager; `.env.example` contains placeholders only.
-- The natural-language SQL route supplies live schema metadata to the model and validates the returned statement before execution.
-- Generated Pandas code from the original experiment is not part of the production CLI, because executing model-generated code is not an acceptable default trust boundary.
+- Raw browser-uploaded rows stay on the application host; Gemini receives a profile/schema rather than raw records.
+- PostgreSQL sessions use read-only mode and reject multiple statements and mutation/admin keywords.
+- Local dataset analysis only accepts `SELECT` and `WITH` queries against a dedicated DuckDB table.
+- Public API imports require HTTP(S), block private-network destinations, disable redirects, enforce timeouts, and cap response size.
+- Cleanup is human-approved and deterministic; the app does not silently impute values with unknown business meaning.
+- CSV downloads are spreadsheet-safe, and local uploads expire on the configured retention schedule.
 
-## Development
+For a public deployment, use HTTPS, a reverse proxy/WAF, a secret manager, encrypted persistent storage, outbound egress controls, and distinct least-privilege database roles.
 
-```bash
-uv run pytest
+## Testing
+
+```powershell
+uv run pytest -q
 uv run ruff check src tests
 ```
 
-## Deployment boundary
+**Current verification:** 26 automated tests passed.
 
-The app is container-ready and includes streamed upload limits, bounded API imports, optional `APP_API_KEY` protection, per-IP request limiting, local dataset expiry, disabled DuckDB external access, and spreadsheet-safe CSV exports. For public recruiter deployment, set `GEMINI_API_KEY` and `APP_API_KEY` only in the host secret manager; use encrypted persistent storage; put the service behind an HTTPS reverse proxy/WAF; and configure egress controls that prevent private-network access. The existing static portfolio demo remains useful for discovery, but it cannot securely host this Python backend or the Gemini secret by itself.
+## Repository layout
+
+```text
+agents/                 Original LangGraph analyst prototype and facade
+models/                 Shared state and structured output contracts
+utils/                  Existing LLM selector and support utilities
+src/ai_agent/           FastAPI app, CLI, config, and safety services
+src/ai_agent/web/       Browser UI assets
+data/                   Ride-sharing seed data and portfolio test datasets
+docs/screenshots/       Captured application walkthrough images
+tests/                  Regression tests for quality, SQL, store, ETL, staging
+feed_db.py              Local PostgreSQL schema/data bootstrap
+```
+
+## Limitations and next steps
+
+- AI recommendations depend on the configured model and schema/profile quality; deterministic checks are the source of truth for counts and missingness.
+- Mapping and reconciliation intentionally stop before business-table mutation; a human-approved loader is the next safe ETL enhancement.
+- The current application is suited to local/single-user portfolio use. Multi-user production needs durable job queues, identity/roles, audit logging, observability, and managed object storage.
+
+## Author
+
+Built by [Vamsi Krishna Samavedam](https://github.com/VamsiKrishnaSamavedam) to demonstrate practical SQL analysis, ETL validation, data-quality review, and safe AI-assisted analytics.
+
