@@ -1,0 +1,11 @@
+.env
+.git
+.venv
+.uv-cache
+__pycache__
+data/runtime
+demo-site
+agents
+models
+utils
+tests

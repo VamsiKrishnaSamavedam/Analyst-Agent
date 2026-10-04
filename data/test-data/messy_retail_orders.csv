@@ -1,0 +1,28 @@
+order_id,customer_name,email,phone,region,order_date,product,quantity,unit_price,discount_pct,total_amount,status
+ORD-1001,  Ava Patel  ,ava.patel@example.com,555-0101,North,2026-01-05,Wireless Mouse,2,29.99,0,59.98,Completed
+ORD-1002,Liam Chen,liam.chen@example.com,555-0102,north,2026-01-06,Keyboard,1,89.99,0.10,80.99,completed
+ORD-1003,Noah Williams,noah.williams@example.com,555-0103,NORTH,2026/01/07,Monitor,1,$299.99,0,299.99,Completed 
+ORD-1004,Emma Garcia,emma.garcia@example.com,555-0104,South,01-08-2026,USB-C Hub,3,49.50,5%,141.08,Completed
+ORD-1005,Olivia Brown,,555-0105,south,2026-01-09,Laptop Stand,1,64.00,,64.00,Pending
+ORD-1006, Ethan Davis,ethan.davis@example.com,,West,2026-01-10,Webcam,0,79.99,0,0,Completed
+ORD-1007,Sophia Miller,sophia.miller@example,555-0107,West ,2026-13-11,Headset,-2,119.99,0,-239.98,Completed
+ORD-1008,Mason Wilson,mason.wilson@example.com,555-0108,East,2026-01-12,Desk Lamp,1,,0,,Completed
+ORD-1009,Isabella Moore,isabella.moore@example.com,555-0109,east,2026-01-13,Notebook,9999,4.50,0,44995.50,Completed
+ORD-1010,James Taylor,james.taylor@example.com,555-0110,EAST,2026-01-14,Pen Set,2,12.00,0.25,18.00,Refunded
+ORD-1011,Mia Anderson,mia.anderson@example.com,555-0111,North-East,2026-01-15,Monitor,1,299.99,0,299.99,Completed
+ORD-1012,Benjamin Thomas,benjamin.thomas@example.com,555-0112,North East,2026-01-16,Keyboard,two,89.99,0,179.98,Completed
+ORD-1013,Charlotte Jackson,charlotte.jackson@example.com,555-0113,South,2026-01-17,Wireless Mouse,2,29.99,0,59.98,Cancelled
+ORD-1014,Lucas White,lucas.white@example.com,555-0114,South,2026-01-18,Webcam,1,79.99,0,79.99,completed
+ORD-1015,Amelia Harris,amelia.harris@example.com,555-0115,West,2026-01-19,USB-C Hub,3,49.50,0.15,126.23,Completed
+ORD-1016,Henry Martin,henry.martin@example.com,555-0116,East,2026-01-20,Laptop Stand,1,64.00,0,64.00,On Hold
+ORD-1017,Harper Thompson,harper.thompson@example.com,555-0117,North,2026-01-21,Desk Lamp,,39.99,0,,Completed
+ORD-1018,Alexander Martinez,alexander.martinez@example.com,555-0118,South,2026-01-22,Notebook,5,4.50,0,22.50,Completed
+ORD-1019,Evelyn Robinson,evelyn.robinson@example.com,555-0119,West,2026-01-23,Pen Set,2,12.00,0,24.00,Complete
+ORD-1020,Daniel Clark,daniel.clark@example.com,555-0120,East,2026-01-24,Keyboard,1,89.99,0,89.99,COMPLETED
+ORD-1021,Abigail Rodriguez,abigail.rodriguez@example.com,555-0121,North,2026-01-25,Monitor,1,299.99,0,299.99,Completed
+ORD-1022,Michael Lewis,michael.lewis@example.com,555-0122,South,2026-01-26,Webcam,1,79.99,0,79.99,
+ORD-1023,Emily Lee,emily.lee@example.com,555-0123,West,2026-01-27,USB-C Hub,3,49.50,0,148.50,Completed
+ORD-1024,Daniel Hall,daniel.hall@example.com,555-0124,East,2026-01-28,Laptop Stand,1,64.00,0,64.00,Completed
+ORD-1025,Grace Allen,grace.allen@example.com,555-0125,North,2026-01-29,Desk Lamp,1,39.99,0,39.99,Completed
+ORD-1002,Liam Chen,liam.chen@example.com,555-0102,north,2026-01-06,Keyboard,1,89.99,0.10,80.99,completed
+ORD-1026,  Ava Patel  ,ava.patel@example.com,555-0101,North,2026-01-05,Wireless Mouse,2,29.99,0,59.98,Completed

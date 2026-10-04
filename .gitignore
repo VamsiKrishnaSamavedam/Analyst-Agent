@@ -1,0 +1,15 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.uv-cache/
+data/extract/
+data/transform/
+data/runtime/
+demo-site/
+data_agent_graph.png
+etl_analyst_graph.png
+sql_analyst_agent_graph.png
+test_schema_details.txt

@@ -1,0 +1,41 @@
+[project]
+name = "ai-agent"
+version = "0.1.0"
+description = "A safe, portfolio-ready AI data analyst for API ETL and PostgreSQL exploration."
+readme = "README.md"
+authors = [
+    { name = "samavedam111778", email = "xtd15@txstate.edu" }
+]
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "duckdb>=1.1.0",
+    "fastapi>=0.115.0",
+    "google-genai>=2.25.0",
+    "ipython>=9.17.1",
+    "langchain>=1.4.3",
+    "langchain-google-genai>=4.4.0",
+    "langgraph>=1.2.12",
+    "pandas>=3.0.6",
+    "psycopg2>=2.9.13",
+    "pydantic>=2.13.5",
+    "python-dotenv>=1.2.3",
+    "python-multipart>=0.0.9",
+    "requests>=2.32.0",
+    "uvicorn[standard]>=0.30.0",
+]
+
+[project.scripts]
+ai-agent = "ai_agent.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.11.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[build-system]
+requires = ["uv_build>=0.12.21,<0.13.0"]
+build-backend = "uv_build"
